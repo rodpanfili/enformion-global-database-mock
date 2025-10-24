@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Enformion Onboarding – Registry Cross‑Check (Mock Demo)</title>
+  <style>
+    :root{
+      --bg:#f8fafc;
+      --card:#ffffff;
+      --ink:#0f172a;
+      --ink-dim:#475569;
+      --accent:#1E63FF; /* Enformion blue (approximate) */
+      --accent-ink:#ffffff;
+      --success:#059669;
+      --warn:#d97706;
+      --err:#dc2626;
+      --line:#e2e8f0;
+      --soft:#f1f5f9;
+      --shadow:0 12px 30px rgba(15,23,42,.08);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Noto Sans",Arial;color:var(--ink);background:var(--bg)}
+
+    /* Centered page column */
+    .page{display:flex;justify-content:center}
+    .wrap{width:100%;max-width:760px;margin:0 auto;padding:20px}
+
+    header{display:flex;align-items:center;gap:12px;justify-content:space-between}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(160deg,#7FB0FF,#1E63FF);color:#fff;font-weight:800;box-shadow:0 8px 20px rgba(45,159,255,.3)}
+    .brand h1{font-size:18px;margin:0}
+    .subtitle{color:var(--ink-dim);font-size:13px;margin-top:2px}
+
+    .topbar{margin-top:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;box-shadow:var(--shadow);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .ticker{display:flex;gap:8px;flex-wrap:wrap;overflow:auto;max-width:100%}
+    .step{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:var(--soft);font-size:12px;color:var(--ink-dim)}
+    .step.ok{background:#ecfdf5;border-color:#bbf7d0;color:#065f46}
+    .step.run{background:#eff6ff;border-color:#bfdbfe;color:#1e40af}
+    .dot{width:10px;height:10px;border-radius:50%;background:var(--line)}
+    .dot.run{background:#60a5fa}
+    .dot.ok{background:#34d399}
+
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow)}
+    h2{margin:0 0 10px 0;font-size:16px}
+    label{display:block;font-size:13px;color:var(--ink-dim);margin-bottom:6px}
+    input,select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:#fff;color:var(--ink);outline:none;transition:box-shadow .2s,border-color .2s}
+    input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,159,255,.15)}
+    .field{margin-bottom:12px}
+
+    .btn{appearance:none;border:none;cursor:pointer;background:var(--accent);color:var(--accent-ink);padding:12px 16px;border-radius:12px;font-weight:700;box-shadow:0 8px 22px rgba(45,159,255,.25)}
+    .btn.secondary{background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:none}
+
+    .matches{margin-top:14px;display:none}
+    .match{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fbfdff}
+    .match + .match{margin-top:8px}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:12px;color:var(--ink-dim)}
+
+    .foot{margin-top:14px;font-size:12px;color:var(--ink-dim)}
+
+    /* Autofill highlight */
+    .flash{animation:flash .9s ease}
+    @keyframes flash{0%{box-shadow:0 0 0 0 rgba(45,159,255,.0)}50%{box-shadow:0 0 0 6px rgba(45,159,255,.25)}100%{box-shadow:0 0 0 0 rgba(45,159,255,.0)}}
+
+    /* Mobile first layout: fields stacked vertically */
+    .grid{display:grid;grid-template-columns:1fr;gap:12px}
+
+    /* Diagnostics card for self tests (only shows with ?selftest=1) */
+    .diag-pass{color:#065f46}
+    .diag-fail{color:#b91c1c}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="wrap">
+      <header>
+        <div class="brand">
+          <div class="logo" aria-hidden="true">EN</div>
+          <div>
+            <h1>Enformion Onboarding – Registry Cross‑Check (Mock)</h1>
+            <div class="subtitle">Frictionless applicant capture with background KYB enrichment via Global Database (simulated)</div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Background status ticker with manual Play button -->
+      <div class="topbar" aria-live="polite">
+        <strong style="font-size:13px">Background:</strong>
+        <div class="ticker" id="ticker"></div>
+        <button id="playDemo" class="btn secondary" type="button" style="margin-left:auto;padding:8px 12px;border-radius:10px">Play demo ▶</button>
+      </div>
+
+      <!-- Matches appear above the form once enrichment completes -->
+      <section class="card matches" id="matches">
+        <h2>Possible company matches for applicant</h2>
+        <div id="matchList"></div>
+      </section>
+
+      <!-- Application form: vertical, centered, mobile-friendly -->
+      <main class="card" style="margin-top:12px" aria-labelledby="form-title">
+        <h2 id="form-title">Applicant details</h2>
+        <form class="grid" onsubmit="return false;">
+          <div class="field"><label for="first">First name</label><input id="first" autocomplete="given-name" /></div>
+          <div class="field"><label for="last">Last name</label><input id="last" autocomplete="family-name" /></div>
+          <div class="field"><label for="email">Email</label><input id="email" type="email" autocomplete="email" /></div>
+          <div class="field"><label for="phone">Phone</label><input id="phone" type="tel" autocomplete="tel" /></div>
+          <div class="field"><label for="dob">Date of birth</label><input id="dob" type="date" /></div>
+          <div class="field"><label for="country">Country</label>
+            <select id="country">
+              <option value="CZ">Czechia</option>
+              <option value="GB">United Kingdom</option>
+              <option value="IE">Ireland</option>
+              <option value="FR">France</option>
+              <option value="DE">Germany</option>
+            </select>
+          </div>
+          <div class="field"><label for="addr1">Address line 1</label><input id="addr1" autocomplete="address-line1" /></div>
+          <div class="field"><label for="addr2">Address line 2 (optional)</label><input id="addr2" autocomplete="address-line2" /></div>
+          <div class="field"><label for="city">City</label><input id="city" autocomplete="address-level2" /></div>
+          <div class="field"><label for="state">Region</label><input id="state" autocomplete="address-level1" /></div>
+          <div class="field"><label for="post">Postcode</label><input id="post" autocomplete="postal-code" /></div>
+          <div class="field"><button id="verifyBtn" class="btn" type="button">Verify now (manual)</button> <button id="resetBtn" class="btn secondary" type="button">Reset</button></div>
+        </form>
+        <div class="foot">Demo only – static front‑end simulation. In production, these values would be posted to Enformion backend, which calls the Global Database API and returns signed results.</div>
+      </main>
+
+      <footer class="foot">© <span id="year"></span> Global Database — demo for prospect review (Enformion‑themed UI). Registry cross‑check simulated. Not affiliated with Enformion.</footer>
+
+      <!-- Diagnostics container (hidden unless selftest=1) -->
+      <section class="card" id="diagnostics" style="display:none;margin-top:12px">
+        <h2>Self‑tests</h2>
+        <div id="diagResults" class="small"></div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    // Fictional registry – Czechia focus
+    const REGISTRY = [
+      {
+        company:"Vltava Payments s.r.o.",
+        country:"CZ",
+        status:"Active",
+        officers:[
+          { name:"Jana Nováková", role:"CFO", dob:"1990-04-15" },
+          { name:"Petr Svoboda", role:"CEO", dob:"1982-09-03" }
+        ],
+        shareholders:[
+          { name:"Jana Nováková", shares:"20%" },
+          { name:"Central Capital a.s.", shares:"80%" }
+        ]
+      },
+      {
+        company:"Pražská Identita a.s.",
+        country:"CZ",
+        status:"Active",
+        officers:[ { name:"Tomáš Dvořák", role:"Předseda představenstva", dob:"1985-01-22" } ],
+        shareholders:[ { name:"Jana Nováková", shares:"5%" }, { name:"Blue Square Ventures s.r.o.", shares:"95%" } ]
+      }
+    ];
+
+    // Demo applicant to auto-type – Czech profile
+    const APPLICANT = {
+      first:"Jana",
+      last:"Nováková",
+      email:"jana.novakova@example.cz",
+      phone:"+420 212 345 678",
+      dob:"1990-04-15",
+      country:"CZ",
+      addr1:"Na Příkopě 14",
+      addr2:"",
+      city:"Praha",
+      state:"Hlavní město Praha",
+      post:"110 00"
+    };
+
+    function setVal(id, val){
+      const el = $(id); if(!el) return; el.value = val; el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+    }
+
+    function addStep(label, cls){
+      const t = $("ticker"); if(!t) return null;
+      const s = document.createElement('div');
+      s.className = 'step ' + (cls||'');
+      const dot = document.createElement('div'); dot.className = 'dot ' + (cls||'');
+      const span = document.createElement('span'); span.textContent = label;
+      s.appendChild(dot); s.appendChild(span); t.appendChild(s);
+      t.scrollLeft = t.scrollWidth;
+      return s;
+    }
+
+    function clearTicker(){ const t=$("ticker"); if(t) t.innerHTML = ""; }
+
+    function waitMs(ms){ return new Promise(res=>setTimeout(res, ms)); }
+    function typeInto(id, text, perChar=120){
+      return new Promise(async (res)=>{
+        const el = $(id); if(!el){ res(); return; }
+        el.value=''; el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+        for(let i=1;i<=text.length;i++){
+          el.value = text.slice(0,i);
+          await waitMs(perChar);
+        }
+        res();
+      });
+    }
+
+    function runEnrichment(){
+      clearTicker();
+      addStep('Applicant info received', 'ok');
+      setTimeout(()=>{
+        const s2 = addStep('Running registry enrichment…', 'run');
+        setTimeout(()=>{
+          if(s2){ s2.classList.remove('run'); s2.classList.add('ok'); const d=s2.querySelector('.dot'); if(d){ d.classList.remove('run'); d.classList.add('ok'); } }
+          addStep('Response from Global Database received', 'ok');
+          setTimeout(()=>{ autoCompleteFromRegistry(); }, 1400);
+        }, 2400);
+      }, 1000);
+    }
+
+    function findMatches(){
+      const full = `${$("first").value}`.trim() + ' ' + `${$("last").value}`.trim();
+      const country = $("country").value;
+      const matches = [];
+      for(const rec of REGISTRY){
+        if(rec.country !== country) continue;
+        for(const o of rec.officers){
+          if(o.name.toLowerCase() === full.toLowerCase()){
+            matches.push({company:rec.company,country:rec.country,status:rec.status,matchType:'Officer',person:o.name,role:o.role,dob:o.dob});
+          }
+        }
+        for(const sh of rec.shareholders){
+          if(sh.name.toLowerCase() === full.toLowerCase()){
+            matches.push({company:rec.company,country:rec.country,status:rec.status,matchType:'Shareholder',person:sh.name,shares:sh.shares});
+          }
+        }
+      }
+      return matches;
+    }
+
+    function renderMatches(list){
+      const box = $("matches"); const tgt = $("matchList"); if(!box||!tgt) return;
+      tgt.innerHTML = '';
+      if(!list.length){ box.style.display='none'; return; }
+      for(const m of list){
+        const div = document.createElement('div');
+        div.className = 'match';
+        div.innerHTML = `
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">
+            <div>
+              <strong>${m.company}</strong>
+              <div class="pill" style="margin-top:6px;">Status: ${m.status}</div>
+            </div>
+            <div class="pill">Match: <strong style="margin-left:4px">${m.matchType}</strong></div>
+          </div>
+          <div style="margin-top:8px;font-size:13px;color:var(--ink-dim)">Person: <strong style="color:var(--ink)">${m.person}</strong>${m.dob?`, DOB ${m.dob}`:''}${m.role?`, Role ${m.role}`:''}${m.shares?`, Shares ${m.shares}`:''}</div>
+        `;
+        tgt.appendChild(div);
+      }
+      // Animate the matches section with a 2s roll-down
+      slideDown(box, 2000);
+    }
+
+    function autoCompleteFromRegistry(){
+      setTimeout(()=>{ setVal('email', APPLICANT.email); }, 800);
+      setTimeout(()=>{ setVal('phone', APPLICANT.phone); }, 1500);
+      setTimeout(()=>{ setVal('dob', APPLICANT.dob); }, 2200);
+      setTimeout(()=>{ setVal('addr2', APPLICANT.addr2); }, 2600);
+      setTimeout(()=>{ setVal('city', APPLICANT.city); }, 3000);
+      setTimeout(()=>{ setVal('state', APPLICANT.state); }, 3400);
+      setTimeout(()=>{ setVal('post', APPLICANT.post); }, 3800);
+      setTimeout(()=>{ renderMatches(findMatches()); }, 4200);
+    }
+
+    function autoTypeSequence(){
+      ['first','last','email','phone','dob','country','addr1','addr2','city','state','post'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
+      typeInto('first', APPLICANT.first, 120)
+        .then(()=> waitMs(700))
+        .then(()=> typeInto('last', APPLICANT.last, 120))
+        .then(()=> waitMs(700))
+        .then(()=> { const c=$("country"); if(c){ c.value = APPLICANT.country; c.classList.add('flash'); } })
+        .then(()=> waitMs(900))
+        .then(()=> typeInto('addr1', APPLICANT.addr1, 90))
+        .then(()=> waitMs(1200))
+        .then(()=> runEnrichment());
+    }
+
+    function manualVerify(){ renderMatches(findMatches()); runEnrichment(); }
+    function resetForm(){
+      ['first','last','email','phone','dob','addr1','addr2','city','state','post'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
+      const c=$("country"); if(c) c.value='CZ';
+      const m=$("matches"); if(m) m.style.display='none';
+      clearTicker();
+    }
+
+    // Robust start logic
+    function startDemoOnce(){ if(window.__demoStarted) return; window.__demoStarted = true; autoTypeSequence(); }
+    document.addEventListener('DOMContentLoaded', ()=>{
+      const btn=$("playDemo"); if(btn) btn.addEventListener('click', startDemoOnce);
+      setTimeout(startDemoOnce, 1500);
+      window.addEventListener('pageshow', startDemoOnce);
+      document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') startDemoOnce(); });
+      $("verifyBtn").addEventListener('click', manualVerify);
+      $("resetBtn").addEventListener('click', resetForm);
+      $("year").textContent = new Date().getFullYear();
+
+      // Optional self-tests via ?selftest=1
+      const params = new URLSearchParams(location.search);
+      if(params.get('selftest')==='1') runSelfTests();
+    });
+
+    // Smooth roll-down helper for the matches section
+    function slideDown(el, duration){
+      el.style.display = 'block';
+      el.style.overflow = 'hidden';
+      el.style.maxHeight = '0px';
+      el.style.opacity = '0';
+      el.style.transition = `max-height ${duration}ms ease, opacity ${duration}ms ease`;
+      void el.getBoundingClientRect();
+      el.style.maxHeight = el.scrollHeight + 'px';
+      el.style.opacity = '1';
+      setTimeout(()=>{
+        el.style.removeProperty('maxHeight');
+        el.style.removeProperty('overflow');
+        el.style.removeProperty('transition');
+      }, duration + 60);
+    }
+
+    // ---------- Self-tests (only if ?selftest=1) ----------
+    function runSelfTests(){
+      const out = $("diagResults"); const card=$("diagnostics"); if(!out||!card) return;
+      card.style.display='block';
+      const results = [];
+      function t(name, fn){
+        try{ const r = fn(); results.push({name, pass:!!r, detail:r}); }
+        catch(e){ results.push({name, pass:false, detail:e.message}); }
+      }
+      t('Functions present', ()=> typeof typeInto==='function' && typeof runEnrichment==='function' && typeof autoCompleteFromRegistry==='function');
+      t('Registry contents (CZ)', ()=> Array.isArray(REGISTRY) && REGISTRY.length===2 && REGISTRY.some(r=>r.company.includes('Vltava')) && REGISTRY.some(r=>r.company.includes('Pražská')));
+      t('Applicant defaults (CZ)', ()=> APPLICANT.first==='Jana' && APPLICANT.country==='CZ');
+      t('Match rendering (CZ)', ()=>{ $("first").value=APPLICANT.first; $("last").value=APPLICANT.last; $("country").value=APPLICANT.country; renderMatches(findMatches()); return $("matches").style.display==='block'; });
+
+      out.innerHTML = results.map(r=>`<div class="${r.pass?'diag-pass':'diag-fail'}">${r.pass?'✔':'✖'} ${r.name}${r.detail!==true && r.detail!==false?`: ${r.detail}`:''}</div>`).join('');
+    }
+  </script>
+</body>
+</html>
